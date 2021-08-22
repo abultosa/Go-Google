@@ -1,0 +1,357 @@
+---
+title: "Google Capstone Project"
+author: "Student!"
+date: "8/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+### Case Study One.
+
+### How Does a Bike-Share Navigate Speedy Success?
+
+### Introduction
+
+This project is about specific business case - Cyclist bike-share company based in Chicago.  In this case study I attempt to show basic data analysis designed to fulfill the six key steps needed in order to analyze a business situation and make justifiable recommendations.  The steps include  ask, prepare, process, analyze, share, and act.  The data set is given at the following link https://divvy-tripdata.s3.amazonaws.com/index.html and imported to R platform to analyze and find insights to tell the story of the data taking into account the various assumptions from the business leaders and stakeholders.
+
+
+### The business question are:
+* How casual riders and annual members use Cyclist bikes differently? 
+* What does Cyclist historical bike trip data trends looks like?
+* Why would casual riders buy Cyclist annual memberships?
+* How can Cyclist use digital media to influence casual riders to become members?
+* Which digital media riders use most often? 
+
+
+### Assumptions are: 
+* The business success depends on maximizing the annual membership.
+
+
+### Known business facts about the company
+
+*  5,824 bicycles and 692 geotracked docking stations. 
+*  Cyclist offers reclining bikes, hand tricycles, and cargo bikes for people with disabilities and riders who can’t use a standard two-wheeled bike. 
+*  The majority of riders opt for traditional bikes; about 8% of riders use the assistive options. 
+*  Cyclistic users are more likely to ride for leisure, 
+*  About 30% use them to commute to work each day.
+
+### Current Pricing strategies: 
+*  Casual riders; Single-ride passes and Full-day passes. 
+*  Annual memberships fee
+
+
+### Prepare
+The case study dataset is located at this link https://divvy-tripdata.s3.amazonaws.com/index.html and downloadable.  The dataset is from 2013 to 2020, although some of the data are organized on quarterly basis, the entire dataset is needed to understand the trend between 2013 and 2020.
+
+### Install needed packages and libraries.  Since I have installed the needed packages, I only need the libraries.  
+
+```{r}
+library(tidyverse) # To wrangle data
+library(ggplot2) #Used to visualize the data and intended to be used to show the trend lines
+library(lubridate) # To wrangle data attributes
+library(reader) #To read the data set
+library(dplyr)
+library(NCmisc)
+library(anytime) # To change data from character to time and date
+library(DescTools)
+```
+
+
+### Download the data.
+
+
+###The data is loaded to check the accuracy, structure, formats etc.. and assign easily identifiable names after the download is done and structure is checked.
+
+
+```{r}
+divvy_apr_2020 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202004-divvy-tripdata.csv')
+divvy_may_2020 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202005-divvy-tripdata.csv')
+divvy_june_2020 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202006-divvy-tripdata.csv')
+divvy_july_2020 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202007-divvy-tripdata.csv')
+divvy_aug_2020 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202008-divvy-tripdata.csv')
+divvy_sep_2020 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202009-divvy-tripdata.csv')
+divvy_oct_2020 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202010-divvy-tripdata.csv')
+divvy_nov_2020 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202011-divvy-tripdata.csv')
+divvy_dec_2020 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202012-divvy-tripdata.csv')
+divvy_jan_2021 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202101-divvy-tripdata.csv')
+divvy_feb_2021 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202102-divvy-tripdata.csv')
+divvy_mar_2021 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202103-divvy-tripdata.csv')
+divvy_apr_2021 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202104-divvy-tripdata.csv')
+divvy_may_2021 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202105-divvy-tripdata.csv')
+divvy_jun_2021 <- read.csv('/Users/R Programming/R Prog-Go-Certi/202106-divvy-tripdata.csv')
+```
+
+###Here the data frame is created calling it "divvy_trip_data" and are combined into one dataset with 'bind_raws' function.
+
+```{r}
+divvy_trip_data <- rbind(divvy_apr_2020, divvy_may_2020, divvy_june_2020, divvy_july_2020, divvy_aug_2020, divvy_sep_2020, divvy_oct_2020, divvy_nov_2020, divvy_dec_2020, divvy_jan_2021, divvy_feb_2021, divvy_mar_2021, divvy_apr_2021, divvy_may_2021,divvy_jun_2021)
+```
+
+
+###Removed the columns that are not required for the analysis or considered irrevelant for the current outstanding questions being addressed.  Also I have decided to remove "N/A" from the dataset.  I have noted that start_lat, start_lng, end_lat, end_lng are not required for this pupose. Therefore, I have decided to remove the "N/A" from the dataset.
+
+```{r}
+divvy_trip_data <- divvy_trip_data %>% 
+  select(-c(start_lat, start_lng, end_lat, end_lng))
+```
+
+
+### To address consistency issues, start_station_id, end_station_id and day_of_week labels have been addressed so that data is consistent and machine readable.
+
+### Remove rows with missing values
+
+```{r}
+colSums(is.na(divvy_trip_data))
+```
+
+### Here the 5% of data with missing values will be removed and a new cleaned data is labeled 'divvydata_cleaned'.  This will be used for the rest of the analysis.
+
+```{r}
+divvydata_cleaned <- divvy_trip_data[complete.cases(divvy_trip_data), ]
+```
+
+###Checking for the data with missing values
+```{r}
+colSums(is.na(divvydata_cleaned))
+```
+
+###It's important to change the class type for started_at and ended_at.  I have used the anytime function to resolve the difficulties of changing the ride_length informaton into a data I could use to find the mean ride_length.  Until I understood how the anytime function is used, I was not able to process the mean ride_length hence in delaying to complete this specific task...I have learned interestingly.
+```{r}
+divvydata_cleaned <- mutate(divvydata_cleaned, started_at = anytime(started_at), ended_at = anytime(ended_at))
+```
+
+### create new column `ride_length` as per the instructions.
+
+```{r}
+divvydata_cleaned$ride_length <- divvydata_cleaned$ended_at - divvydata_cleaned$started_at
+divvydata_cleaned$ride_length <- hms::hms(seconds_to_period(divvydata_cleaned$ride_length))
+```
+
+
+### Data with started_at greater than ended_at will be removed
+```{r}
+divvydata_cleaned <- divvydata_cleaned %>% 
+        filter(divvydata_cleaned$started_at < divvydata_cleaned$ended_at)
+```
+
+
+###Check the consistancy of colomn names, nrows, dim, head, tail, str and the summary with the original individual monthly dataset.  It's clear the geolocation is removed!  The number of variable is now 11 compared to 15 from the original data set.
+```{r}
+colnames(divvydata_cleaned)
+nrow(divvydata_cleaned)  
+dim(divvydata_cleaned)  
+head(divvydata_cleaned) 
+tail(divvydata_cleaned)
+str(divvydata_cleaned)  
+summary(divvydata_cleaned)
+```
+
+### create new column `day_of_week` as per the instruction
+
+```{r}
+divvydata_cleaned$day_of_week <- wday(divvydata_cleaned$started_at, label = FALSE)
+```
+
+###Checked the final consistancy of colomn names, nrows, dim, head, tail, str and the summary with the original individual monthly dataset.  It's clear the geolocation is removed!  The number of variable is now 11 compared to 15 from the original data set.
+
+```{r}
+colnames(divvydata_cleaned)
+nrow(divvydata_cleaned)  
+dim(divvydata_cleaned)  
+head(divvydata_cleaned) 
+tail(divvydata_cleaned)
+str(divvydata_cleaned)  
+summary(divvydata_cleaned)
+```
+
+
+## The basics of analysis for mean, max and min ride_length.
+
+### Mean of ride_length
+
+```{r}
+divvydata_cleaned %>% 
+        summarize(mean(ride_length))
+```
+
+
+### max ride_length
+
+```{r}
+divvydata_cleaned %>% 
+        summarize(max(ride_length))
+```
+
+### min ride_length
+
+```{r}
+divvydata_cleaned %>% 
+        summarize(min(ride_length))
+```
+
+### Compare members and casual users
+
+```{r}
+aggregate(divvydata_cleaned$ride_length ~ divvydata_cleaned$member_casual, FUN = mean)
+aggregate(divvydata_cleaned$ride_length ~ divvydata_cleaned$member_casual, FUN = median)
+aggregate(divvydata_cleaned$ride_length ~ divvydata_cleaned$member_casual, FUN = max)
+aggregate(divvydata_cleaned$ride_length ~ divvydata_cleaned$member_casual, FUN = min)
+```
+
+### See the average ride time by each day for members vs casual users
+
+```{r}
+aggregate(divvydata_cleaned$ride_length ~ divvydata_cleaned$member_casual + divvydata_cleaned$day_of_week, FUN = mean)
+```
+
+
+##Other stastical measures are tried here.
+
+### mode of day_of_week
+
+```{r}
+Mode(divvydata_cleaned$day_of_week)
+```
+
+
+### average ride_length for members and casual riders
+
+```{r}
+divvydata_cleaned %>% 
+        group_by(member_casual) %>% 
+        summarize(mean(ride_length))
+```
+
+
+## The graphical representation of the data addressing ride_length, rideable_type and member_causal ride_length.
+
+```{r}
+ggplot(data = divvydata_cleaned) +
+geom_point(mapping = aes(x = ride_length, y = rideable_type))
+facet_grid(member_casual ~ ride_length)
+```
+
+
+
+### average ride_length for users by day_of_week
+```{r}
+mean_ride <- divvydata_cleaned %>% 
+        group_by(day_of_week) %>% 
+        summarize(mean(ride_length))
+```
+
+
+###how member_casual ride_length looks?
+```{r}
+ggplot(data = divvydata_cleaned) +
+geom_point(mapping = aes(x = member_casual, y = ride_length))
+```
+
+
+### number of rides for users by day_of_week
+
+```{r}
+divvydata_cleaned %>% 
+        group_by(ride_id, day_of_week, member_casual) %>% 
+        summarize(number_of_rides=n())
+```
+
+
+
+```{r}
+divvydata_cleaned %>% 
+        group_by(day_of_week, member_casual) %>% 
+        summarize(number_of_rides=n())
+```
+
+###  Average ride time by each day for members vs casual users
+
+```{r}
+aggregate(divvydata_cleaned$ride_length ~ divvydata_cleaned$member_casual + divvydata_cleaned$day_of_week, FUN = mean)
+```
+
+### Analyze ridership data by type and weekday
+
+```{r}
+divvydata_cleaned %>% 
+        mutate(weekday = wday(started_at, label = TRUE)) %>% 
+        group_by(member_casual, weekday) %>% 
+        summarize(number_of_rides = n(),
+                  average_duration = mean(ride_length)) %>% 
+        arrange(member_casual, weekday)
+```
+
+### Visualize number of rides by rider type
+
+```{r}
+divvydata_cleaned %>% 
+        mutate(weekday = wday(started_at, label = TRUE)) %>% 
+        group_by(member_casual, weekday) %>% 
+        summarize(number_of_rides = n(),
+                  average_duration = mean(ride_length)) %>% 
+        arrange(member_casual, weekday) %>% 
+        ggplot(aes(x = weekday, y = number_of_rides, fill = member_casual)) +
+        geom_col(position = "dodge") +
+        scale_fill_manual(values = c("Orange","purple")) +
+        labs(title = "Number of Rides by Days and Rider Type",
+             subtitle = "Members versus Casual Users") +
+        ylab("Number of Rides") +
+        xlab("Day of Week")
+```
+
+### Visualization for average duration
+
+```{r}
+divvydata_cleaned %>% 
+        mutate(weekday = wday(started_at, label = TRUE)) %>% 
+        group_by(member_casual, weekday) %>% 
+        summarize(average_duration = mean(ride_length)) %>% 
+        arrange(member_casual, weekday) %>% 
+        ggplot(aes(x = weekday, y = average_duration, fill = member_casual)) +
+        geom_col(position = "dodge") +
+        scale_fill_manual(values = c("blue","red")) +
+        labs(title = "Average Duration of Rides by Days and Rider Type",
+             subtitle = "Members versus Casual Users") +
+        ylab("Average Duration of Rides") +
+        xlab("Day of Week")
+```
+
+###Average ride_length by type and day of week
+
+```{r}
+counts <- aggregate(divvydata_cleaned$ride_length ~ divvydata_cleaned$member_casual +
+                            divvydata_cleaned$day_of_week, FUN = mean)
+write.csv(counts, file = 'avg_ride-length.csv')
+```
+
+###Average ride_length and type and month
+
+```{r}
+divvydata_cleaned$month <- month(divvydata_cleaned$started_at, label = TRUE)
+```
+
+
+```{r}
+rides <- aggregate(divvydata_cleaned$ride_length ~ divvydata_cleaned$member_casual +
+                           divvydata_cleaned$month,FUN = mean)
+write.csv(rides, file = 'avg_ride_length_by_month.csv')
+```
+
+###Dataset for visualization
+
+```{r}
+alltrips <- divvydata_cleaned %>% 
+        select(-day_of_week)
+```
+
+
+
+```{r}
+alltrips$day_of_week <- wday(divvydata_cleaned$started_at, label = TRUE)
+write.csv(alltrips, file = "all_trips.csv", row.names = FALSE)
+```
+
+
